@@ -156,21 +156,29 @@ Use slash commands in the chat input or in STScript:
 
 #### Advanced Examples
 
-**Create a timed automation:**
+**Create a timed automation using STScript:**
 
-Turn on a device, wait 10 seconds, then turn it off:
-
-```
-/tplink-on Lamp | /pyrun import time; time.sleep(10) | /tplink-off Lamp
-```
-
-Turn on a device, wait 10 minutes, then turn it off:
+Use STScript's `delay` command to wait between operations:
 
 ```
-/tplink-on Coffee Maker | /pyrun import time; time.sleep(600) | /tplink-off Coffee Maker
+/tplink-on Lamp | /delay 10000 | /tplink-off Lamp
 ```
 
-**Note**: Commands must be chained with `|` (pipe) for sequential execution. Commands on separate lines will run simultaneously, not sequentially.
+Or create a Quick Reply with multiple steps:
+
+```
+/tplink-on Coffee Maker | /echo Coffee maker started | /delay 600000 | /tplink-off Coffee Maker | /echo Coffee ready!
+```
+
+**Alternative: Use PyRunner for complex logic:**
+
+For more complex automations, create a Python script that includes the timing:
+
+```
+/pyrun import time; from tplink import control_device; control_device('192.168.1.100', 'on'); time.sleep(10); control_device('192.168.1.100', 'off')
+```
+
+**Note**: Use `/delay` (in milliseconds) for timed sequences. The `|` pipe ensures sequential execution.
 
 **Use with Quick Replies:**
 
