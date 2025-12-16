@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { registerTPLinkMacros } from './hooks/MessageHooks';
 import { registerTPLinkCommands } from './hooks/SlashCommands';
+import StatusDisplayService from './services/StatusDisplayService';
 
 // Create the extension settings panel
 function createSettingsPanel() {
@@ -40,6 +41,27 @@ function createSettingsPanel() {
                 </React.StrictMode>
             );
             console.log('[SillyTPLink] Extension initialized successfully');
+
+            // Initialize global status display after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                StatusDisplayService.init();
+                console.log('[SillyTPLink] Status display initialized');
+
+                // Set initial visibility based on saved settings
+                setTimeout(() => {
+                    const context = typeof SillyTavern !== 'undefined' ? SillyTavern.getContext() : null;
+                    if (context) {
+                        const extensionSettings = context.extensionSettings || {};
+                        const tplinkSettings = extensionSettings.tplink || {};
+                        const showStatus = tplinkSettings.showStatusBox !== undefined ? tplinkSettings.showStatusBox : true;
+
+                        window.dispatchEvent(new CustomEvent('tplink:statusbox:toggle', {
+                            detail: { enabled: showStatus }
+                        }));
+                        console.log('[SillyTPLink] Initial status box visibility:', showStatus);
+                    }
+                }, 100);
+            }, 500);
 
             // Initialize hooks after a delay to ensure SillyTavern and tplinkExtension are ready
             setTimeout(() => {

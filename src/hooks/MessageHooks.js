@@ -53,6 +53,14 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
     // Skip if already processed
     if (processedMessages.has(mesElement)) return;
 
+    // Check if message is still streaming (has streaming class or is-typing)
+    if (mesElement.classList.contains('streaming') || 
+        mesElement.classList.contains('is-typing') ||
+        mesElement.querySelector('.mes_text.streaming')) {
+        console.log('[SillyTPLink] Message still streaming, skipping...');
+        return;
+    }
+
     // Find the text content
     let mesText = mesElement.querySelector('.mes_text .stle--content') || mesElement.querySelector('.mes_text');
     if (!mesText) return;
@@ -111,27 +119,43 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
             if (m.action === 'cycle') {
                 // Cycle: turn on, wait, turn off
                 const duration = m.duration || 5; // Default 5 seconds if not specified
-                
-                console.log(`[SillyTPLink] Cycling device "${device.name}" (${device.ip}) for ${duration} seconds`);
-                
+
+                console.log(`[SillyTPLink] CYCLE ACTION - Device: "${device.name}" (${device.ip}) for ${duration}s`);
+                console.log(`[SillyTPLink] Calling controlDevice(${device.ip}, 'on')...`);
+
                 // Turn on
                 const onSuccess = await controlDevice(device.ip, 'on');
+                console.log(`[SillyTPLink] Turn ON result: ${onSuccess}`);
+
                 if (!onSuccess) {
-                    console.error(`[SillyTPLink] Failed to turn on device for cycle`);
+                    console.error(`[SillyTPLink] FAILED to turn on device for cycle`);
                     continue;
                 }
-                
+
+                // Emit cycle event for status display
+                window.dispatchEvent(new CustomEvent('tplink:device:cycle', {
+                    detail: {
+                        deviceName: device.name,
+                        deviceDescription: device.description,
+                        ip: device.ip,
+                        duration: duration
+                    }
+                }));
+
+                console.log(`[SillyTPLink] Device turned ON successfully, will turn OFF in ${duration}s`);
+
                 // Wait for specified duration then turn off
                 setTimeout(async () => {
                     console.log(`[SillyTPLink] Turning off device "${device.name}" after ${duration} seconds`);
                     await controlDevice(device.ip, 'off');
+                    // Note: controlDevice in App.js will emit the 'off' event, no need to duplicate
                 }, duration * 1000);
-                
+
                 replacement = `[${device.description} CYCLED ${duration}s]`;
             } else {
                 // Regular on/off control
                 console.log(`[SillyTPLink] Controlling device "${device.name}" (${device.ip}) - turning ${m.action}`);
-                
+
                 const success = await controlDevice(device.ip, m.action);
 
                 if (!success) {
@@ -139,24 +163,36 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
                     continue;
                 }
 
+                // Note: controlDevice in App.js will emit the on/off event, no need to duplicate
+
                 replacement = `[${device.description} ${m.action.toUpperCase()}]`;
             }
             
-            console.log(`[SillyTPLink] Replacing "${m.full}" with "${replacement}"`);
+            console.log(`[SillyTPLink] Macro: "${m.full}" -> Visual: "${replacement}"`);
 
-            // Update the chat data
+            // Update chat data and DOM separately
             if (context.chat && mesId !== null) {
                 const msgIndex = parseInt(mesId);
                 if (context.chat[msgIndex]) {
                     const originalMes = context.chat[msgIndex].mes;
-                    const newMes = originalMes.replace(m.full, replacement);
-                    if (newMes !== originalMes) {
-                        context.chat[msgIndex].mes = newMes;
-
-                        // Force re-render of this message
+                    
+                    // Context: Strip macro entirely (AI never sees it or replacement)
+                    const contextMes = originalMes.replace(m.full, '').replace(/\s+/g, ' ').trim();
+                    
+                    // Visual: Replace macro with visual feedback (user sees it)
+                    const visualMes = originalMes.replace(m.full, replacement);
+                    
+                    if (contextMes !== originalMes || visualMes !== originalMes) {
+                        // Update context WITHOUT the macro or replacement
+                        context.chat[msgIndex].mes = contextMes;
+                        const messageType = context.chat[msgIndex].is_user ? 'User' : 'AI';
+                        console.log(`[SillyTPLink] ${messageType} context: "${contextMes}"`);
+                        
+                        // Update DOM WITH visual replacement
                         const mesTextEl = mesElement.querySelector('.mes_text');
                         if (mesTextEl) {
-                            mesTextEl.innerHTML = newMes;
+                            mesTextEl.innerHTML = visualMes;
+                            console.log(`[SillyTPLink] Visual shown: "${visualMes}"`);
                         }
                     }
                 }
@@ -164,6 +200,94 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
         } catch (error) {
             console.error(`[SillyTPLink] Error processing macro ${m.full}:`, error);
         }
+    }
+}
+
+
+// Track macro-only messages that should not trigger generation
+const macroOnlyMessages = new Set();
+
+/**
+ * Intercept generation to suppress AI response for macro-only messages
+ */
+function interceptUserInput(context) {
+    console.log('[SillyTPLink] Setting up quiet action interceptor...');
+
+    // Listen for MESSAGE_SENDING to mark macro-only messages
+    if (context.eventSource && context.eventTypes?.MESSAGE_SENDING) {
+        context.eventSource.on(context.eventTypes.MESSAGE_SENDING, (data) => {
+            const messageText = data?.text || data?.message || '';
+
+            // Check if message contains ONLY macros
+            const macroPattern = /\{\{tplink-(on|off|cycle):[^:}]+(?::\d+)?\}\}/gi;
+            const macros = messageText.match(macroPattern) || [];
+            const textWithoutMacros = messageText.replace(macroPattern, '').trim();
+
+            if (macros.length > 0 && textWithoutMacros === '') {
+                console.log('[SillyTPLink] Macro-only message detected - marking for no generation');
+                // Store the next message index that will be macro-only
+                const nextIndex = context.chat ? context.chat.length : 0;
+                macroOnlyMessages.add(nextIndex);
+                console.log(`[SillyTPLink] Marked message index ${nextIndex} as macro-only`);
+            }
+        });
+    }
+
+    // Listen for USER_MESSAGE_RENDERED to check if we should suppress generation
+    if (context.eventSource && context.eventTypes?.USER_MESSAGE_RENDERED) {
+        context.eventSource.on(context.eventTypes.USER_MESSAGE_RENDERED, (messageId) => {
+            // Check if this message was marked as macro-only
+            if (macroOnlyMessages.has(messageId)) {
+                console.log(`[SillyTPLink] Message ${messageId} is macro-only - will suppress generation`);
+
+                // Use setTimeout to let the message process, then check if we should cancel generation
+                setTimeout(() => {
+                    // Get the processed message from chat
+                    if (context.chat && context.chat[messageId]) {
+                        const processedMes = context.chat[messageId].mes || '';
+
+                        // If the message is now empty (macros were stripped), prevent generation
+                        if (processedMes.trim() === '') {
+                            console.log('[SillyTPLink] Message is empty after macro processing - canceling generation');
+
+                            // Try to stop generation if it hasn't started yet
+                            if (typeof context.stopGeneration === 'function') {
+                                context.stopGeneration();
+                            }
+
+                            // Alternative: Set the abort flag if it exists
+                            if (context.abortController) {
+                                context.abortController.abort();
+                            }
+
+                            // Clean up the tracking set
+                            macroOnlyMessages.delete(messageId);
+                        }
+                    }
+                }, 1500); // Wait for macro processing to complete
+            }
+        });
+    }
+
+    // Hook into GENERATION_STARTED to prevent it for macro-only messages
+    if (context.eventSource && context.eventTypes?.GENERATION_STARTED) {
+        context.eventSource.on(context.eventTypes.GENERATION_STARTED, () => {
+            // Check if the last user message was macro-only
+            if (context.chat && context.chat.length > 0) {
+                const lastMessage = context.chat[context.chat.length - 1];
+                if (lastMessage.is_user && lastMessage.mes.trim() === '' && macroOnlyMessages.size > 0) {
+                    console.log('[SillyTPLink] Canceling generation for macro-only message');
+
+                    // Stop generation
+                    if (typeof context.stopGeneration === 'function') {
+                        context.stopGeneration();
+                    }
+
+                    // Clear tracking
+                    macroOnlyMessages.clear();
+                }
+            }
+        });
     }
 }
 
@@ -201,12 +325,27 @@ export async function registerTPLinkMacros(getDevices, controlDevice) {
     if (context.eventTypes.CHARACTER_MESSAGE_RENDERED) {
         context.eventSource.on(context.eventTypes.CHARACTER_MESSAGE_RENDERED, (messageId) => {
             console.log(`[SillyTPLink] CHARACTER_MESSAGE_RENDERED event for message ${messageId}`);
-            setTimeout(async () => {
+            
+            // Retry multiple times to handle streaming
+            const tryProcess = async (attempt = 1, maxAttempts = 3) => {
                 const mesElement = document.querySelector(`#chat .mes[mesid="${messageId}"]`);
-                if (mesElement) {
+                if (!mesElement) return;
+                
+                // Check if still streaming
+                const isStreaming = mesElement.classList.contains('streaming') || 
+                                   mesElement.classList.contains('is-typing') ||
+                                   mesElement.querySelector('.mes_text.streaming');
+                
+                if (isStreaming && attempt < maxAttempts) {
+                    console.log(`[SillyTPLink] Message ${messageId} still streaming, retry ${attempt}/${maxAttempts}`);
+                    setTimeout(() => tryProcess(attempt + 1, maxAttempts), 2000);
+                } else {
+                    console.log(`[SillyTPLink] Processing message ${messageId} (attempt ${attempt})`);
                     await processMessageElement(mesElement, getDevices, controlDevice);
                 }
-            }, 500);
+            };
+            
+            setTimeout(() => tryProcess(), 1000);
         });
     }
 
@@ -219,9 +358,12 @@ export async function registerTPLinkMacros(getDevices, controlDevice) {
                 if (mesElement) {
                     await processMessageElement(mesElement, getDevices, controlDevice);
                 }
-            }, 100);
+            }, 500);
         });
     }
+
+    // Set up quiet action interceptor to suppress AI response for macro-only messages
+    interceptUserInput(context);
 
     console.log('[SillyTPLink] Message hooks registered successfully');
 }

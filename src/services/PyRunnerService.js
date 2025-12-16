@@ -74,12 +74,31 @@ with open('python/${script}', 'r') as f:
             // Parse the output as JSON
             try {
                 const output = result.output || '';
-                console.log('[PyRunnerService] Python output:', output);
-                const parsed = JSON.parse(output);
+                console.log('[PyRunnerService] Python output (first 500 chars):', output.substring(0, 500));
+
+                // Extract JSON from output (usually the last line)
+                // Some scripts output progress messages before the JSON
+                const lines = output.trim().split('\n');
+                let jsonStr = lines[lines.length - 1]; // Try last line first
+
+                // If last line doesn't start with { or [, try to find JSON in output
+                if (!jsonStr.trim().startsWith('{') && !jsonStr.trim().startsWith('[')) {
+                    // Look for JSON in the output by finding lines that start with { or [
+                    for (let i = lines.length - 1; i >= 0; i--) {
+                        const line = lines[i].trim();
+                        if (line.startsWith('{') || line.startsWith('[')) {
+                            jsonStr = line;
+                            break;
+                        }
+                    }
+                }
+
+                console.log('[PyRunnerService] Attempting to parse JSON from:', jsonStr.substring(0, 200));
+                const parsed = JSON.parse(jsonStr);
                 console.log('[PyRunnerService] Parsed result:', parsed);
                 return parsed;
             } catch (e) {
-                console.error('[PyRunnerService] Failed to parse output:', e, 'Raw:', result);
+                console.error('[PyRunnerService] Failed to parse output:', e, 'Raw output:', result.output);
                 return { error: 'Failed to parse Python response', raw: result };
             }
         } catch (error) {

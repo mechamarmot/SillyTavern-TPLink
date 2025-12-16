@@ -1,5 +1,5 @@
 /* global SillyTavern */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DeviceList from './components/DeviceList';
 import AddDevice from './components/AddDevice';
 import PyRunnerService from './services/PyRunnerService';
@@ -10,11 +10,36 @@ function App() {
     const [isDiscovering, setIsDiscovering] = useState(false);
     const [error, setError] = useState(null);
     const [pyRunnerAvailable, setPyRunnerAvailable] = useState(false);
+    const [showStatusBox, setShowStatusBox] = useState(true);
 
     // Load saved devices from extension settings
     useEffect(() => {
         loadDevices();
         checkPyRunnerAvailability();
+        loadSettings();
+    }, []);
+
+    // Reload devices when component becomes visible or settings change
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                console.log('[SillyTPLink] Page visible, reloading devices...');
+                loadDevices();
+            }
+        };
+
+        const handleFocus = () => {
+            console.log('[SillyTPLink] Window focused, reloading devices...');
+            loadDevices();
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleFocus);
+        };
     }, []);
 
     const checkPyRunnerAvailability = async () => {
@@ -65,23 +90,75 @@ function App() {
     };
 
     const loadDevices = () => {
+        console.log('[SillyTPLink] Loading devices from settings...');
         const context = SillyTavern.getContext();
         const extensionSettings = context.extensionSettings || {};
         const tplinkSettings = extensionSettings.tplink || { devices: [] };
+        console.log('[SillyTPLink] Loaded devices:', tplinkSettings.devices);
         setDevices(tplinkSettings.devices || []);
     };
 
     const saveDevices = (newDevices) => {
+        console.log('[SillyTPLink] Saving devices:', newDevices);
         const context = SillyTavern.getContext();
         context.extensionSettings = context.extensionSettings || {};
-        context.extensionSettings.tplink = { devices: newDevices };
+        context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+        context.extensionSettings.tplink.devices = newDevices;
+        console.log('[SillyTPLink] Settings to save:', context.extensionSettings.tplink);
         context.saveSettingsDebounced();
         setDevices(newDevices);
+        console.log('[SillyTPLink] Devices saved and state updated');
+    };
+
+    const loadSettings = () => {
+        console.log('[SillyTPLink] Loading settings...');
+        const context = SillyTavern.getContext();
+        const extensionSettings = context.extensionSettings || {};
+        const tplinkSettings = extensionSettings.tplink || {};
+        const showStatus = tplinkSettings.showStatusBox !== undefined ? tplinkSettings.showStatusBox : true;
+        console.log('[SillyTPLink] Show status box:', showStatus);
+        setShowStatusBox(showStatus);
+    };
+
+    const handleStatusBoxToggle = (event) => {
+        const newValue = event.target.checked;
+        console.log('[SillyTPLink] Status box toggle:', newValue);
+        setShowStatusBox(newValue);
+
+        // Save to settings
+        const context = SillyTavern.getContext();
+        context.extensionSettings = context.extensionSettings || {};
+        context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+        context.extensionSettings.tplink.showStatusBox = newValue;
+        context.saveSettingsDebounced();
+
+        // Emit event for StatusDisplayService
+        window.dispatchEvent(new CustomEvent('tplink:statusbox:toggle', {
+            detail: { enabled: newValue }
+        }));
+    };
+
+    const sanitizeDeviceName = (name) => {
+        // Replace spaces with underscores
+        let sanitized = name.replace(/\s+/g, '_');
+        // Remove all non-alphanumeric characters except underscores
+        sanitized = sanitized.replace(/[^a-zA-Z0-9_]/g, '');
+        // Ensure it's not empty
+        if (!sanitized) {
+            sanitized = 'Device_' + Date.now();
+        }
+        return sanitized;
+    };
+
+    const validateDeviceName = (name) => {
+        // Must be alphanumeric + underscores only, no spaces or special chars
+        const validPattern = /^[a-zA-Z0-9_]+$/;
+        return validPattern.test(name);
     };
 
     const addDevice = async (ip, name) => {
         try {
-            // Get device info
+            // Get device info first
             const info = await PyRunnerService.getDeviceInfo(ip);
 
             if (info.error) {
@@ -91,7 +168,12 @@ function App() {
 
             const sysInfo = info.system?.get_sysinfo || {};
             const originalName = sysInfo.alias || sysInfo.dev_name || ip;
-            const deviceName = name || originalName;
+
+            // Sanitize the device name (replace spaces with underscores, remove special chars)
+            const rawName = name || originalName;
+            const deviceName = sanitizeDeviceName(rawName);
+
+            console.log(`[SillyTPLink] Sanitized device name: "${rawName}" -> "${deviceName}"`);
 
             const newDevice = {
                 id: Date.now(),
@@ -104,10 +186,41 @@ function App() {
                 description: 'Generic Device'
             };
 
-            const updatedDevices = [...devices, newDevice];
-            saveDevices(updatedDevices);
-            setError(null);
-            return true;
+            // Use functional state update to avoid closure issues
+            let deviceAdded = false;
+            setDevices(prevDevices => {
+                // Check for duplicate IP using current state
+                const existingDeviceByIp = prevDevices.find(d => d.ip === ip);
+                if (existingDeviceByIp) {
+                    setError(`Device with IP ${ip} already exists (${existingDeviceByIp.name}). Cannot add duplicate IP addresses.`);
+                    return prevDevices; // Return unchanged
+                }
+
+                // Check for duplicate name
+                const existingDeviceByName = prevDevices.find(d => d.name.toLowerCase() === deviceName.toLowerCase());
+                if (existingDeviceByName) {
+                    setError(`Device with name "${deviceName}" already exists. Please choose a different name.`);
+                    return prevDevices; // Return unchanged
+                }
+
+                const updatedDevices = [...prevDevices, newDevice];
+
+                // Save to settings
+                const context = SillyTavern.getContext();
+                context.extensionSettings = context.extensionSettings || {};
+                context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+                context.extensionSettings.tplink.devices = updatedDevices;
+                context.saveSettingsDebounced();
+
+                deviceAdded = true;
+                return updatedDevices;
+            });
+
+            if (deviceAdded) {
+                setError(null);
+                return true;
+            }
+            return false;
         } catch (err) {
             setError(`Error adding device: ${err.message}`);
             return false;
@@ -115,22 +228,75 @@ function App() {
     };
 
     const removeDevice = (deviceId) => {
-        const updatedDevices = devices.filter(d => d.id !== deviceId);
-        saveDevices(updatedDevices);
+        setDevices(prevDevices => {
+            const updatedDevices = prevDevices.filter(d => d.id !== deviceId);
+
+            // Save to settings
+            const context = SillyTavern.getContext();
+            context.extensionSettings = context.extensionSettings || {};
+            context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+            context.extensionSettings.tplink.devices = updatedDevices;
+            context.saveSettingsDebounced();
+
+            return updatedDevices;
+        });
     };
 
     const updateDeviceDescription = (deviceId, newDescription) => {
-        const updatedDevices = devices.map(d =>
-            d.id === deviceId ? { ...d, description: newDescription } : d
-        );
-        saveDevices(updatedDevices);
+        setDevices(prevDevices => {
+            const updatedDevices = prevDevices.map(d =>
+                d.id === deviceId ? { ...d, description: newDescription } : d
+            );
+
+            // Save to settings
+            const context = SillyTavern.getContext();
+            context.extensionSettings = context.extensionSettings || {};
+            context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+            context.extensionSettings.tplink.devices = updatedDevices;
+            context.saveSettingsDebounced();
+
+            return updatedDevices;
+        });
     };
 
     const updateDeviceName = (deviceId, newName) => {
-        const updatedDevices = devices.map(d =>
-            d.id === deviceId ? { ...d, name: newName } : d
-        );
-        saveDevices(updatedDevices);
+        // Validate name format
+        if (!validateDeviceName(newName)) {
+            setError(`Invalid device name "${newName}". Names must contain only letters, numbers, and underscores (no spaces or special characters).`);
+            return false;
+        }
+
+        let nameUpdated = false;
+        setDevices(prevDevices => {
+            // Check for duplicate name (excluding the device being renamed)
+            const existingDevice = prevDevices.find(d =>
+                d.id !== deviceId && d.name.toLowerCase() === newName.toLowerCase()
+            );
+
+            if (existingDevice) {
+                setError(`Device with name "${newName}" already exists. Please choose a different name.`);
+                return prevDevices; // Return unchanged
+            }
+
+            const updatedDevices = prevDevices.map(d =>
+                d.id === deviceId ? { ...d, name: newName } : d
+            );
+
+            // Save to settings
+            const context = SillyTavern.getContext();
+            context.extensionSettings = context.extensionSettings || {};
+            context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+            context.extensionSettings.tplink.devices = updatedDevices;
+            context.saveSettingsDebounced();
+
+            nameUpdated = true;
+            return updatedDevices;
+        });
+
+        if (nameUpdated) {
+            setError(null);
+        }
+        return nameUpdated;
     };
 
     const discoverDevices = async () => {
@@ -280,13 +446,25 @@ function App() {
     };
 
     const updateDeviceState = async (deviceId, newState) => {
-        const device = devices.find(d => d.id === deviceId);
-        if (!device) return;
-
         try {
+            // First, find the device to get its IP and info
+            let deviceIp = null;
+            let deviceInfo = null;
+            setDevices(prevDevices => {
+                const device = prevDevices.find(d => d.id === deviceId);
+                if (device) {
+                    deviceIp = device.ip;
+                    deviceInfo = device;
+                }
+                return prevDevices; // No change yet
+            });
+
+            if (!deviceIp) return;
+
+            // Call PyRunner with the device IP
             const result = newState === 'on'
-                ? await PyRunnerService.turnOn(device.ip)
-                : await PyRunnerService.turnOff(device.ip);
+                ? await PyRunnerService.turnOn(deviceIp)
+                : await PyRunnerService.turnOff(deviceIp);
 
             if (result.error) {
                 setError(`Failed to control device: ${result.error}`);
@@ -294,10 +472,33 @@ function App() {
             }
 
             // Update device state
-            const updatedDevices = devices.map(d =>
-                d.id === deviceId ? { ...d, state: newState } : d
-            );
-            saveDevices(updatedDevices);
+            setDevices(prevDevices => {
+                const updatedDevices = prevDevices.map(d =>
+                    d.id === deviceId ? { ...d, state: newState } : d
+                );
+
+                // Save to settings
+                const context = SillyTavern.getContext();
+                context.extensionSettings = context.extensionSettings || {};
+                context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+                context.extensionSettings.tplink.devices = updatedDevices;
+                context.saveSettingsDebounced();
+
+                return updatedDevices;
+            });
+
+            // Emit event for status display (using captured device info)
+            if (deviceInfo) {
+                console.log(`[SillyTPLink] Emitting ${newState} event for UI button: ${deviceInfo.name} (${deviceInfo.description}) at ${deviceInfo.ip}`);
+                window.dispatchEvent(new CustomEvent(`tplink:device:${newState}`, {
+                    detail: {
+                        deviceName: deviceInfo.name,
+                        deviceDescription: deviceInfo.description,
+                        ip: deviceInfo.ip
+                    }
+                }));
+            }
+
             setError(null);
         } catch (err) {
             setError(`Error controlling device: ${err.message}`);
@@ -305,11 +506,21 @@ function App() {
     };
 
     const refreshDeviceState = async (deviceId) => {
-        const device = devices.find(d => d.id === deviceId);
-        if (!device) return;
-
         try {
-            const info = await PyRunnerService.getDeviceInfo(device.ip);
+            // First, find the device to get its IP
+            let deviceIp = null;
+            setDevices(prevDevices => {
+                const device = prevDevices.find(d => d.id === deviceId);
+                if (device) {
+                    deviceIp = device.ip;
+                }
+                return prevDevices; // No change yet
+            });
+
+            if (!deviceIp) return;
+
+            // Get device info from PyRunner
+            const info = await PyRunnerService.getDeviceInfo(deviceIp);
 
             if (info.error) {
                 setError(`Failed to get device info: ${info.error}`);
@@ -317,19 +528,30 @@ function App() {
             }
 
             const sysInfo = info.system?.get_sysinfo || {};
-            const originalName = sysInfo.alias || sysInfo.dev_name || device.ip;
+            const originalName = sysInfo.alias || sysInfo.dev_name || deviceIp;
             const newState = sysInfo.relay_state === 1 ? 'on' : 'off';
 
             // Update device state and sync original name
-            const updatedDevices = devices.map(d =>
-                d.id === deviceId ? {
-                    ...d,
-                    state: newState,
-                    originalName: originalName, // Sync the actual device name
-                    model: sysInfo.model || d.model
-                } : d
-            );
-            saveDevices(updatedDevices);
+            setDevices(prevDevices => {
+                const updatedDevices = prevDevices.map(d =>
+                    d.id === deviceId ? {
+                        ...d,
+                        state: newState,
+                        originalName: originalName, // Sync the actual device name
+                        model: sysInfo.model || d.model
+                    } : d
+                );
+
+                // Save to settings
+                const context = SillyTavern.getContext();
+                context.extensionSettings = context.extensionSettings || {};
+                context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+                context.extensionSettings.tplink.devices = updatedDevices;
+                context.saveSettingsDebounced();
+
+                return updatedDevices;
+            });
+
             setError(null);
         } catch (err) {
             setError(`Error getting device state: ${err.message}`);
@@ -337,15 +559,39 @@ function App() {
     };
 
     // Export device access helpers for macro and slash command hooks
+    // Use useRef to avoid recreating functions on every render
+    const devicesRef = useRef(devices);
+
+    useEffect(() => {
+        devicesRef.current = devices;
+    }, [devices]);
+
     useEffect(() => {
         window.tplinkExtension = {
-            // Get all devices
-            getDevices: () => devices,
+            // Get all devices - always returns current state via ref
+            getDevices: () => devicesRef.current,
 
             // Control a device by IP address
             controlDevice: async (ip, action) => {
                 try {
-                    console.log(`[SillyTPLink] controlDevice: ${ip} -> ${action}`);
+                    console.log(`[SillyTPLink] 🎮 controlDevice called:`, { ip, action });
+
+                    // Find device FIRST using ref (always current state)
+                    const currentDevices = devicesRef.current;
+                    console.log(`[SillyTPLink] 🔍 Looking for device with IP ${ip} in:`, currentDevices.map(d => ({ name: d.name, ip: d.ip })));
+
+                    const deviceInfo = currentDevices.find(d => d.ip === ip);
+
+                    if (deviceInfo) {
+                        console.log(`[SillyTPLink] ✅ Found device:`, {
+                            name: deviceInfo.name,
+                            description: deviceInfo.description,
+                            ip: deviceInfo.ip
+                        });
+                    } else {
+                        console.error(`[SillyTPLink] ❌ Device with IP ${ip} NOT FOUND in state!`);
+                        return false;
+                    }
 
                     // Call appropriate PyRunner service method
                     const result = action === 'on'
@@ -353,20 +599,44 @@ function App() {
                         : await PyRunnerService.turnOff(ip);
 
                     if (result.error) {
-                        console.error(`[SillyTPLink] Control failed: ${result.error}`);
+                        console.error(`[SillyTPLink] ❌ Control failed:`, result.error);
                         return false;
                     }
 
-                    // Update local device state
-                    const updatedDevices = devices.map(d =>
-                        d.ip === ip ? { ...d, state: action } : d
-                    );
-                    saveDevices(updatedDevices);
+                    console.log(`[SillyTPLink] ✅ PyRunner ${action} succeeded for ${ip}`);
 
-                    console.log(`[SillyTPLink] Device ${ip} turned ${action}`);
+                    // Update local device state
+                    setDevices(prevDevices => {
+                        const updatedDevices = prevDevices.map(d =>
+                            d.ip === ip ? { ...d, state: action } : d
+                        );
+
+                        // Save to settings
+                        const context = SillyTavern.getContext();
+                        context.extensionSettings = context.extensionSettings || {};
+                        context.extensionSettings.tplink = context.extensionSettings.tplink || {};
+                        context.extensionSettings.tplink.devices = updatedDevices;
+                        context.saveSettingsDebounced();
+
+                        return updatedDevices;
+                    });
+
+                    // Emit custom event for status display
+                    const eventData = {
+                        deviceName: deviceInfo.name,
+                        deviceDescription: deviceInfo.description,
+                        ip: deviceInfo.ip
+                    };
+                    console.log(`[SillyTPLink] 📡 Emitting tplink:device:${action} event:`, eventData);
+                    window.dispatchEvent(new CustomEvent(`tplink:device:${action}`, {
+                        detail: eventData
+                    }));
+                    console.log(`[SillyTPLink] 📡 Event emitted successfully`);
+
+                    console.log(`[SillyTPLink] ✅ Device ${ip} turned ${action} - operation complete`);
                     return true;
                 } catch (err) {
-                    console.error(`[SillyTPLink] Error controlling device:`, err);
+                    console.error(`[SillyTPLink] ❌ Error controlling device:`, err);
                     return false;
                 }
             },
@@ -383,12 +653,24 @@ function App() {
         };
 
         console.log('[SillyTPLink] Device access helpers exported to window.tplinkExtension');
-    }, [devices]);
+    }, []); // Empty dependency array - functions created once, access devices via ref
 
     return (
         <div className="tplink-extension">
             <div className="tplink-header">
                 <h3>SillyTPLink - TP-Link Smart Home Control</h3>
+            </div>
+
+            <div className="tplink-settings-row">
+                <label className="tplink-checkbox-label">
+                    <input
+                        type="checkbox"
+                        checked={showStatusBox}
+                        onChange={handleStatusBoxToggle}
+                        className="tplink-checkbox"
+                    />
+                    <span>Display Device Status Box</span>
+                </label>
             </div>
 
             {error && (

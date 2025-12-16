@@ -1,0 +1,122 @@
+/* Status Display Styles for SillyTavern-TPLink */
+/* Multi-device stack below top menubar */
+
+/* Container for all device status rows */
+#tplink-status-container {
+  position: fixed;
+  top: 45px; /* Below menubar */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 500px;
+  min-width: 300px;
+  z-index: 500; /* Below menus (1000) and modals (10000) */
+  background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.75));
+  border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.3s, transform 0.3s;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#tplink-status-container.tplink-status-hidden {
+  display: none; /* Hide completely when no devices */
+}
+
+/* Individual device row */
+.tplink-device-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.08));
+  transition: background 0.2s;
+}
+
+.tplink-device-row:first-child {
+  border-radius: 8px 8px 0 0;
+}
+
+.tplink-device-row:last-child {
+  border-bottom: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.tplink-device-row:only-child {
+  border-radius: 8px;
+}
+
+.tplink-device-row:hover {
+  background: var(--SmartThemeBlurTintColor, rgba(255, 255, 255, 0.05));
+}
+
+/* Status dot */
+.tplink-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tplink-status-dot.status-on {
+  background: #28a745; /* Green */
+}
+
+.tplink-status-dot.status-off {
+  background: #dc3545; /* Red */
+}
+
+.tplink-status-dot.status-cycle {
+  background: #ffc107; /* Orange */
+  animation: tplink-pulse 1s infinite;
+}
+
+/* Device status text */
+.tplink-status-text {
+  flex: 1; /* Take remaining space */
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--SmartThemeBodyColor, #fff);
+  text-align: center;
+}
+
+/* Remove button (X) */
+.tplink-remove-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--SmartThemeBodyColor, #666);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tplink-remove-btn:hover:not(:disabled) {
+  background: var(--SmartThemeBlurTintColor, rgba(220, 53, 69, 0.1));
+  color: #dc3545;
+}
+
+.tplink-remove-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Pulse animation for cycling devices */
+@keyframes tplink-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

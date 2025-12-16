@@ -212,6 +212,79 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
     }));
     console.log('[SillyTPLink] Registered /tplink-toggle');
 
+    // Command: /tplink-cycle <device-name> <seconds>
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'tplink-cycle',
+        callback: async (args, value) => {
+            console.log('[SillyTPLink] /tplink-cycle called with:', { args, value });
+            try {
+                // Parse arguments: device name and duration
+                const parts = (value || '').trim().split(/\s+/);
+
+                if (parts.length < 2) {
+                    return 'Error: Please specify device name and duration. Usage: /tplink-cycle <device-name> <seconds>';
+                }
+
+                const duration = parseInt(parts.pop()); // Last argument is duration
+                const deviceName = parts.join(' '); // Rest is device name
+
+                if (!deviceName) {
+                    return 'Error: Please specify a device name. Usage: /tplink-cycle <device-name> <seconds>';
+                }
+
+                if (isNaN(duration) || duration <= 0) {
+                    return 'Error: Duration must be a positive number. Usage: /tplink-cycle <device-name> <seconds>';
+                }
+
+                const devices = getDevices();
+                if (!devices || devices.length === 0) {
+                    return 'Error: No devices configured';
+                }
+
+                const device = findDevice(devices, deviceName);
+                if (!device) {
+                    return `Error: Device "${deviceName}" not found. Use /tplink-status to list devices.`;
+                }
+
+                // Turn on the device
+                const onSuccess = await controlDevice(device.ip, 'on');
+                if (!onSuccess) {
+                    return `Error: Failed to turn on "${device.name}"`;
+                }
+
+                // Emit cycle event for status display
+                window.dispatchEvent(new CustomEvent('tplink:device:cycle', {
+                    detail: {
+                        deviceName: device.name,
+                        deviceDescription: device.description,
+                        ip: device.ip,
+                        duration: duration
+                    }
+                }));
+
+                // Schedule turn off
+                setTimeout(async () => {
+                    console.log(`[SillyTPLink] /tplink-cycle: Turning off device "${device.name}" after ${duration} seconds`);
+                    await controlDevice(device.ip, 'off');
+                }, duration * 1000);
+
+                return `✓ Cycling "${device.name}" for ${duration} seconds`;
+            } catch (error) {
+                console.error('[SillyTPLink] /tplink-cycle error:', error);
+                return `Error: ${error.message}`;
+            }
+        },
+        helpString: 'Cycle a TP-Link device (turn on, wait, turn off). Usage: /tplink-cycle <device-name> <seconds>',
+        unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'device name and duration',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true
+            })
+        ]
+    }));
+    console.log('[SillyTPLink] Registered /tplink-cycle');
+
     // Command: /tplink-status
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'tplink-status',

@@ -33,8 +33,11 @@ Control your TP-Link Kasa smart home devices directly from SillyTavern using the
 /tplink-on Lamp
 /tplink-off Lamp
 /tplink-toggle Lamp
+/tplink-cycle Lamp 5
 /tplink-status
 ```
+
+The `/tplink-cycle` command turns a device on for a specified number of seconds, then automatically turns it off.
 
 ### Message Macros
 
@@ -42,6 +45,18 @@ Control your TP-Link Kasa smart home devices directly from SillyTavern using the
 - `{{tplink-on:DeviceName}}` - Turn device on
 - `{{tplink-off:DeviceName}}` - Turn device off  
 - `{{tplink-cycle:DeviceName:seconds}}` - Turn on, wait, then turn off
+
+**How it works:**
+- Macros control the device when the message is rendered
+- Visual feedback (e.g., `[Lamp ON]`) is shown to you in the chat
+- **Both the macro AND the visual replacement are stripped from AI context**
+- Other text in the message remains for the AI to see
+- This prevents the AI from learning and repeating device control syntax
+
+**Example:**
+- You send: `Turn on the lamp {{tplink-on:Lamp}} please`
+- You see: `Turn on the lamp [Lamp ON] please`
+- AI sees: `Turn on the lamp please`
 
 Embed control in messages:
 ```
@@ -87,6 +102,16 @@ The lamp will flash {{tplink-cycle:Lamp:3}} as a notification
 - **Manual Entry**: Add devices by IP address
 - **Rename/Description**: Right-click menu on device cards
 - **Remove**: Delete devices you no longer need
+- **Status Display**: Real-time status box shows recently controlled devices with countdown timers
+
+### Status Display Box
+
+A semi-transparent status box appears below the top menu when you control devices, showing:
+- Device description and current state (ON/OFF)
+- Live countdown timer for cycling devices
+- Support for multiple devices simultaneously with independent timers
+- Toggle visibility in extension settings
+- Remove devices from display when OFF by clicking the × button
 
 ## Device Naming & Aliases
 
@@ -97,7 +122,21 @@ The extension tracks both the **actual TP-Link device name** (from the device fi
 
 **Why this matters**: When you rename a device in the TP-Link/Kasa app, the device's firmware name changes. The extension automatically syncs this when you click the refresh button (↻) on the device card, while your custom alias remains unchanged.
 
-**Commands use your alias**: When you use `/tplink-on "My Lamp"`, the extension finds the device by your custom alias but controls it via IP address, so commands always work regardless of name changes.
+**Commands use your alias**: When you use `/tplink-on My_Lamp`, the extension finds the device by your custom alias but controls it via IP address, so commands always work regardless of name changes.
+
+### Device Name Requirements
+
+**Device names must follow these rules:**
+- Single word only (no spaces)
+- Alphanumeric characters and underscores only (`A-Z`, `a-z`, `0-9`, `_`)
+- No special characters or hyphens
+- Must be unique (case-insensitive)
+
+**Auto-sanitization**: When adding devices, spaces are automatically replaced with underscores and special characters are removed. For example:
+- `Living Room Lamp!` becomes `Living_Room_Lamp`
+- `My Device #1` becomes `My_Device_1`
+
+**Renaming**: When manually renaming devices, invalid characters will trigger an error. Use underscores instead of spaces.
 
 ## Compatible Devices
 
