@@ -84,6 +84,11 @@ function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription
                 <div className="device-header">
                     <div className="device-info">
                         <div className="device-name">{device.name}</div>
+                        {device.originalName && device.originalName !== device.name && (
+                            <div className="device-original-name" title="Actual TP-Link device name">
+                                Device: {device.originalName}
+                            </div>
+                        )}
                         <div className="device-description">"{device.description}"</div>
                         <div className="device-model">{device.model}</div>
                         <div className="device-ip">{device.ip}</div>
@@ -100,6 +105,9 @@ function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription
                     </div>
                     <div className="control-phrase">
                         OFF PHRASE: <code>{`{{tplink-off:${deviceName}}}`}</code>
+                    </div>
+                    <div className="control-phrase">
+                        CYCLE PHRASE: <code>{`{{tplink-cycle:${deviceName}:#}}`}</code>
                     </div>
                 </div>
 

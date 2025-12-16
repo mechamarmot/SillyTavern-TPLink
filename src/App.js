@@ -90,12 +90,14 @@ function App() {
             }
 
             const sysInfo = info.system?.get_sysinfo || {};
-            const deviceName = name || sysInfo.alias || sysInfo.dev_name || ip;
+            const originalName = sysInfo.alias || sysInfo.dev_name || ip;
+            const deviceName = name || originalName;
 
             const newDevice = {
                 id: Date.now(),
                 ip,
-                name: deviceName,
+                name: deviceName, // User-editable alias
+                originalName: originalName, // Actual TP-Link device name
                 model: sysInfo.model || 'Unknown',
                 state: sysInfo.relay_state === 1 ? 'on' : 'off',
                 hasEmeter: sysInfo.feature?.includes('ENE') || false,
@@ -307,15 +309,25 @@ function App() {
         if (!device) return;
 
         try {
-            const state = await PyRunnerService.getDeviceState(device.ip);
+            const info = await PyRunnerService.getDeviceInfo(device.ip);
 
-            if (state.error) {
-                setError(`Failed to get device state: ${state.error}`);
+            if (info.error) {
+                setError(`Failed to get device info: ${info.error}`);
                 return;
             }
 
+            const sysInfo = info.system?.get_sysinfo || {};
+            const originalName = sysInfo.alias || sysInfo.dev_name || device.ip;
+            const newState = sysInfo.relay_state === 1 ? 'on' : 'off';
+
+            // Update device state and sync original name
             const updatedDevices = devices.map(d =>
-                d.id === deviceId ? { ...d, state: state.state } : d
+                d.id === deviceId ? {
+                    ...d,
+                    state: newState,
+                    originalName: originalName, // Sync the actual device name
+                    model: sysInfo.model || d.model
+                } : d
             );
             saveDevices(updatedDevices);
             setError(null);

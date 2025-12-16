@@ -38,6 +38,11 @@ Control your TP-Link Kasa smart home devices directly from SillyTavern using the
 
 ### Message Macros
 
+**Available Macros:**
+- `{{tplink-on:DeviceName}}` - Turn device on
+- `{{tplink-off:DeviceName}}` - Turn device off  
+- `{{tplink-cycle:DeviceName:seconds}}` - Turn on, wait, then turn off
+
 Embed control in messages:
 ```
 Turn on the lights {{tplink-on:Living Room Light}} please!
@@ -48,9 +53,24 @@ Result:
 Turn on the lights [Living Room Lamp ON] please!
 ```
 
+**Cycle macro** - Turn on for a duration, then automatically turn off:
+```
+Activating the lamp {{tplink-cycle:Desk Lamp:5}} for 5 seconds
+```
+
+Result:
+```
+Activating the lamp [Desk Lamp CYCLED 5s] for 5 seconds
+```
+
 ### Advanced Examples
 
-**Timed automation:**
+**Timed automation with cycle macro:**
+```
+The lamp will flash {{tplink-cycle:Lamp:3}} as a notification
+```
+
+**Timed automation with slash commands:**
 ```
 /tplink-on Lamp | /delay 10000 | /tplink-off Lamp
 ```
@@ -67,6 +87,17 @@ Turn on the lights [Living Room Lamp ON] please!
 - **Manual Entry**: Add devices by IP address
 - **Rename/Description**: Right-click menu on device cards
 - **Remove**: Delete devices you no longer need
+
+## Device Naming & Aliases
+
+The extension tracks both the **actual TP-Link device name** (from the device firmware) and a **custom alias** you can set:
+
+- **Original Name**: The device name configured in your TP-Link/Kasa app (automatically synced when you refresh)
+- **Custom Alias**: A user-friendly name you set in SillyTavern (used in slash commands and macros)
+
+**Why this matters**: When you rename a device in the TP-Link/Kasa app, the device's firmware name changes. The extension automatically syncs this when you click the refresh button (↻) on the device card, while your custom alias remains unchanged.
+
+**Commands use your alias**: When you use `/tplink-on "My Lamp"`, the extension finds the device by your custom alias but controls it via IP address, so commands always work regardless of name changes.
 
 ## Compatible Devices
 

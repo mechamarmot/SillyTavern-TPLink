@@ -1,12 +1,12 @@
 /**
- * MessageHooks.js - Handles {{tplink-on:Device_Name}} and {{tplink-off:Device_Name}} replacements
+ * MessageHooks.js - Handles {{tplink-on:Device_Name}}, {{tplink-off:Device_Name}}, and {{tplink-cycle:Device_Name:seconds}} replacements
  *
  * Intercepts messages to find and replace device control macros:
  * {{tplink-on:Device_Name}} or {{tplink-off:Device Name}}
  *
  * The macros will:
  * 1. Actually control the device (turn it on or off)
- * 2. Replace themselves with status text: [Device Description ON] or [Device Description OFF]
+ * 2. Replace themselves with status text: [Device Description ON], [Device Description OFF], or [Device Description CYCLED 5s]
  */
 
 // Track processed messages to avoid reprocessing
@@ -60,7 +60,7 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
     const text = mesText.textContent || '';
 
     // Regex to match {{tplink-on:DeviceName}} or {{tplink-off:DeviceName}}
-    const pattern = /\{\{tplink-(on|off):([^}]+)\}\}/gi;
+    const pattern = /\{\{tplink-(on|off|cycle):([^:}]+)(?::(\d+))?\}\}/gi;
 
     let match;
     const matches = [];
@@ -68,7 +68,8 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
         matches.push({
             full: match[0],
             action: match[1].toLowerCase(),
-            deviceName: match[2].trim()
+            deviceName: match[2].trim(),
+            duration: match[3] ? parseInt(match[3]) : null
         });
     }
 
@@ -105,18 +106,42 @@ async function processMessageElement(mesElement, getDevices, controlDevice) {
                 continue;
             }
 
-            console.log(`[SillyTPLink] Controlling device "${device.name}" (${device.ip}) - turning ${m.action}`);
+            let replacement;
 
-            // Control the device
-            const success = await controlDevice(device.ip, m.action);
+            if (m.action === 'cycle') {
+                // Cycle: turn on, wait, turn off
+                const duration = m.duration || 5; // Default 5 seconds if not specified
+                
+                console.log(`[SillyTPLink] Cycling device "${device.name}" (${device.ip}) for ${duration} seconds`);
+                
+                // Turn on
+                const onSuccess = await controlDevice(device.ip, 'on');
+                if (!onSuccess) {
+                    console.error(`[SillyTPLink] Failed to turn on device for cycle`);
+                    continue;
+                }
+                
+                // Wait for specified duration then turn off
+                setTimeout(async () => {
+                    console.log(`[SillyTPLink] Turning off device "${device.name}" after ${duration} seconds`);
+                    await controlDevice(device.ip, 'off');
+                }, duration * 1000);
+                
+                replacement = `[${device.description} CYCLED ${duration}s]`;
+            } else {
+                // Regular on/off control
+                console.log(`[SillyTPLink] Controlling device "${device.name}" (${device.ip}) - turning ${m.action}`);
+                
+                const success = await controlDevice(device.ip, m.action);
 
-            if (!success) {
-                console.error(`[SillyTPLink] Failed to control device`);
-                continue;
+                if (!success) {
+                    console.error(`[SillyTPLink] Failed to control device`);
+                    continue;
+                }
+
+                replacement = `[${device.description} ${m.action.toUpperCase()}]`;
             }
-
-            // Create replacement text using device description
-            const replacement = `[${device.description} ${m.action.toUpperCase()}]`;
+            
             console.log(`[SillyTPLink] Replacing "${m.full}" with "${replacement}"`);
 
             // Update the chat data
