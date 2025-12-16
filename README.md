@@ -7,17 +7,16 @@ Control your TP-Link Kasa smart home devices directly from SillyTavern using the
 ## Requirements
 
 - **SillyTavern**
-- **[SillyTavern-PyRunner](https://github.com/mechamarmot/SillyTavern-PyRunner)** - Extension (required)
-- **[SillyTavern-PyRunner-Plugin](https://github.com/mechamarmot/SillyTavern-PyRunner-Plugin)** - Server plugin (required)
+- **[SillyTavern-PyRunner](https://github.com/mechamarmot/SillyTavern-PyRunner)** - Extension (auto-installs server plugin)
 - **Python 3.7+**
 - **TP-Link Kasa Devices** (see compatible devices at bottom)
 
 ## Installation
 
-1. Install PyRunner extension and PyRunner-Plugin server plugin
+1. Install PyRunner extension (server plugin installs automatically)
 2. Clone this repo to `SillyTavern/public/scripts/extensions/third-party/SillyTavern-Kasa`
-3. Enable both PyRunner and SillyTPLink in SillyTavern extensions panel
-4. The SillyTPLink panel will appear in extensions settings
+3. Enable both PyRunner and SillyTPLink in extensions panel
+4. Restart SillyTavern
 
 ## Quick Start
 
@@ -92,7 +91,7 @@ Based on [softScheck/tplink-smartplug](https://github.com/softScheck/tplink-smar
 
 ## Troubleshooting
 
-**PyRunner not available**: Install PyRunner extension and PyRunner-Plugin server plugin
+**PyRunner not available**: Install PyRunner extension and restart SillyTavern
 **Device not found**: Check IP address, ensure same network, allow port 9999 in firewall
 **Discovery fails**: Use Network Scan or Manual Entry instead
 **Commands not working**: Wait 10 seconds after page load, then reload if needed
