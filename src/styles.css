@@ -1,0 +1,518 @@
+/* SillyTPLink Extension Styles */
+
+/* Inline settings panel */
+#tplink_settings {
+    margin-bottom: 10px;
+}
+
+#tplink_container {
+    padding: 10px 0;
+}
+
+.tplink-extension {
+    padding: 10px;
+    max-width: 100%;
+}
+
+.tplink-header h3 {
+    margin: 0 0 15px 0;
+    color: var(--SmartThemeBodyColor, #333);
+    font-size: 1.2em;
+}
+
+/* Error and Warning Messages */
+.tplink-error,
+.tplink-warning {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.tplink-error {
+    background-color: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    color: #dc3545;
+}
+
+.tplink-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #856404;
+}
+
+.error-close {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+}
+
+/* Add Device Section */
+.tplink-add-device {
+    background: var(--SmartThemeBlurTintColor, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.1));
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.tplink-add-device h4 {
+    margin: 0 0 10px 0;
+    color: var(--SmartThemeBodyColor, #333);
+}
+
+.add-device-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.input-ip,
+.input-name {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--SmartThemeBorderColor, #ccc);
+    border-radius: 4px;
+    background: var(--SmartThemeEmColor, #fff);
+    color: var(--SmartThemeBodyColor, #333);
+    font-size: 14px;
+}
+
+.input-ip {
+    min-width: 200px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-add,
+.btn-discover,
+.btn-test,
+.btn-test-connection,
+.btn-scan {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-add {
+    background: var(--SmartThemeQuoteColor, #007bff);
+    color: white;
+}
+
+.btn-add:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.btn-discover {
+    background: var(--SmartThemeBodyColor, #6c757d);
+    color: white;
+}
+
+.btn-discover:hover:not(:disabled) {
+    background: #5a6268;
+}
+
+.btn-test,
+.btn-test-connection,
+.btn-scan {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-test:hover:not(:disabled),
+.btn-test-connection:hover:not(:disabled),
+.btn-scan:hover:not(:disabled) {
+    background: #138496;
+}
+
+.btn-add:disabled,
+.btn-discover:disabled,
+.btn-test:disabled,
+.btn-test-connection:disabled,
+.btn-scan:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.add-device-help {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--SmartThemeFastUIBGColor, #666);
+}
+
+.add-device-help p {
+    margin: 0;
+}
+
+/* Device List */
+.tplink-device-list h4 {
+    margin: 0 0 15px 0;
+    color: var(--SmartThemeBodyColor, #333);
+}
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+}
+
+.device-card {
+    background: var(--SmartThemeBlurTintColor, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.1));
+    border-radius: 5px;
+    padding: 15px;
+    transition: box-shadow 0.2s;
+    position: relative;
+}
+
+.device-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.device-info {
+    flex: 1;
+}
+
+.device-name {
+    font-weight: bold;
+    font-size: 16px;
+    color: var(--SmartThemeBodyColor, #333);
+    margin-bottom: 4px;
+}
+
+.device-model {
+    font-size: 13px;
+    color: var(--SmartThemeFastUIBGColor, #666);
+    margin-bottom: 2px;
+}
+
+.device-ip {
+    font-size: 12px;
+    color: var(--SmartThemeFastUIBGColor, #999);
+    font-family: monospace;
+}
+
+.device-description {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--SmartThemeFastUIBGColor, #666);
+    margin-bottom: 4px;
+}
+
+/* Device Context Menu */
+.device-menu-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.05));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.1));
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #333);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.device-menu-button:hover {
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.1));
+    border-color: var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.2));
+}
+
+.device-context-menu {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    background: var(--SmartThemeEmColor, #fff);
+    border: 1px solid var(--SmartThemeBorderColor, #ccc);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 160px;
+    overflow: hidden;
+}
+
+.context-menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #333);
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.context-menu-item:hover {
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.05));
+}
+
+.context-menu-item:not(:last-child) {
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.1));
+}
+
+.device-status {
+    font-size: 24px;
+    line-height: 1;
+    margin-left: 10px;
+}
+
+.device-status.on {
+    color: #28a745;
+}
+
+.device-status.off {
+    color: #6c757d;
+}
+
+/* Control Phrases */
+.device-control-phrases {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.02));
+    border-radius: 4px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.05));
+}
+
+.control-phrase {
+    font-size: 12px;
+    color: var(--SmartThemeFastUIBGColor, #666);
+    line-height: 1.6;
+    margin: 4px 0;
+}
+
+.control-phrase code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.05));
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--SmartThemeBodyColor, #333);
+    border: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.1));
+    user-select: all;
+}
+
+.device-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-toggle {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-toggle.on {
+    background: #28a745;
+    color: white;
+}
+
+.btn-toggle.on:hover:not(:disabled) {
+    background: #218838;
+}
+
+.btn-toggle.off {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-toggle.off:hover:not(:disabled) {
+    background: #5a6268;
+}
+
+.btn-toggle:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-refresh,
+.btn-remove {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    transition: all 0.2s;
+}
+
+.btn-refresh {
+    background: var(--SmartThemeQuoteColor, #17a2b8);
+    color: white;
+}
+
+.btn-refresh:hover:not(:disabled) {
+    background: #138496;
+}
+
+.btn-remove {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-remove:hover {
+    background: #c82333;
+}
+
+.btn-refresh:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Empty State */
+.tplink-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--SmartThemeFastUIBGColor, #666);
+}
+
+.tplink-empty p {
+    margin: 8px 0;
+}
+
+/* Description Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    background: var(--SmartThemeEmColor, #fff);
+    border: 1px solid var(--SmartThemeBorderColor, #ccc);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+    margin: 0 0 12px 0;
+    color: var(--SmartThemeBodyColor, #333);
+    font-size: 1.3em;
+}
+
+.modal-device-name {
+    font-size: 14px;
+    color: var(--SmartThemeFastUIBGColor, #666);
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--SmartThemeBorderColor, #ccc);
+    border-radius: 4px;
+    background: var(--SmartThemeEmColor, #fff);
+    color: var(--SmartThemeBodyColor, #333);
+    font-size: 14px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor, #007bff);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-modal-save,
+.btn-modal-cancel {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-modal-save {
+    background: var(--SmartThemeQuoteColor, #007bff);
+    color: white;
+}
+
+.btn-modal-save:hover {
+    background: #0056b3;
+}
+
+.btn-modal-cancel {
+    background: var(--SmartThemeBodyColor, #6c757d);
+    color: white;
+}
+
+.btn-modal-cancel:hover {
+    background: #5a6268;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .form-row {
+        flex-direction: column;
+    }
+
+    .device-grid {
+        grid-template-columns: 1fr;
+    }
+}
