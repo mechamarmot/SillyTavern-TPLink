@@ -1,7 +1,7 @@
 import React from 'react';
 import DeviceCard from './DeviceCard';
 
-function DeviceList({ devices, onRemove, onToggle, onRefresh, onUpdateDescription, disabled }) {
+function DeviceList({ devices, onRemove, onToggle, onRefresh, onUpdateDescription, onRename, disabled }) {
     if (devices.length === 0) {
         return null;
     }
@@ -18,6 +18,7 @@ function DeviceList({ devices, onRemove, onToggle, onRefresh, onUpdateDescriptio
                         onRefresh={onRefresh}
                         onRemove={onRemove}
                         onUpdateDescription={onUpdateDescription}
+                        onRename={onRename}
                         disabled={disabled}
                     />
                 ))}

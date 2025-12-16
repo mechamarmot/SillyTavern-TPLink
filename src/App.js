@@ -124,6 +124,13 @@ function App() {
         saveDevices(updatedDevices);
     };
 
+    const updateDeviceName = (deviceId, newName) => {
+        const updatedDevices = devices.map(d =>
+            d.id === deviceId ? { ...d, name: newName } : d
+        );
+        saveDevices(updatedDevices);
+    };
+
     const discoverDevices = async () => {
         if (!pyRunnerAvailable) {
             setError('PyRunner is not available');
@@ -355,6 +362,11 @@ function App() {
             // Update device description
             updateDescription: (deviceId, description) => {
                 updateDeviceDescription(deviceId, description);
+            },
+
+            // Update device name
+            updateName: (deviceId, name) => {
+                updateDeviceName(deviceId, name);
             }
         };
 
@@ -397,6 +409,7 @@ function App() {
                 onToggle={updateDeviceState}
                 onRefresh={refreshDeviceState}
                 onUpdateDescription={updateDeviceDescription}
+                onRename={updateDeviceName}
                 disabled={!pyRunnerAvailable}
             />
 

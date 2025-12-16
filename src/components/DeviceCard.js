@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import DescriptionModal from './DescriptionModal';
+import RenameModal from './RenameModal';
 
-function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription, disabled }) {
+function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription, onRename, disabled }) {
     const [showMenu, setShowMenu] = useState(false);
     const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+    const [showRenameModal, setShowRenameModal] = useState(false);
 
     const handleToggle = () => {
         const newState = device.state === 'on' ? 'off' : 'on';
@@ -20,6 +22,11 @@ function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription
         setShowDescriptionModal(true);
     };
 
+    const handleRename = () => {
+        setShowMenu(false);
+        setShowRenameModal(true);
+    };
+
     const handleRemove = () => {
         setShowMenu(false);
         onRemove(device.id);
@@ -28,6 +35,11 @@ function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription
     const handleSaveDescription = (newDescription) => {
         onUpdateDescription(device.id, newDescription);
         setShowDescriptionModal(false);
+    };
+
+    const handleSaveRename = (newName) => {
+        onRename(device.id, newName);
+        setShowRenameModal(false);
     };
 
     // Device name is used as-is in macros (spaces are fine)
@@ -57,6 +69,9 @@ function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription
                 {/* Context Menu */}
                 {showMenu && (
                     <div className="device-context-menu">
+                        <div className="context-menu-item" onClick={handleRename}>
+                            Rename Device
+                        </div>
                         <div className="context-menu-item" onClick={handleEditDescription}>
                             Edit Description
                         </div>
@@ -123,6 +138,15 @@ function DeviceCard({ device, onToggle, onRefresh, onRemove, onUpdateDescription
                     deviceName={device.name}
                     onSave={handleSaveDescription}
                     onClose={() => setShowDescriptionModal(false)}
+                />
+            )}
+
+            {/* Rename Modal */}
+            {showRenameModal && (
+                <RenameModal
+                    currentName={device.name}
+                    onSave={handleSaveRename}
+                    onClose={() => setShowRenameModal(false)}
                 />
             )}
         </>

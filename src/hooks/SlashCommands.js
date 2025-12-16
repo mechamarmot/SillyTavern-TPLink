@@ -68,14 +68,23 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
     }
 
     // Access slash command system from context
-    const { SlashCommand, SlashCommandParser } = context;
+    const { SlashCommand, SlashCommandParser, SlashCommandArgument, ARGUMENT_TYPE } = context;
 
-    // Command: /tplink-on <device-name>
-    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+    console.log('[SillyTPLink] SlashCommand APIs:', {
+        hasSlashCommand: !!SlashCommand,
+        hasParser: !!SlashCommandParser,
+        hasArgument: !!SlashCommandArgument,
+        hasArgumentType: !!ARGUMENT_TYPE
+    });
+
+    try {
+        // Command: /tplink-on <device-name>
+        SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'tplink-on',
-        callback: async (args) => {
+        callback: async (args, value) => {
+            console.log('[SillyTPLink] /tplink-on called with:', { args, value });
             try {
-                const deviceName = args.toString().trim();
+                const deviceName = (value || args.toString()).trim();
 
                 if (!deviceName) {
                     return 'Error: Please specify a device name. Usage: /tplink-on <device-name>';
@@ -104,16 +113,22 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
         },
         helpString: 'Turn on a TP-Link device. Usage: /tplink-on <device-name>',
         unnamedArgumentList: [
-            SlashCommand.argument('device name', [SlashCommand.ARGUMENT_TYPE.STRING], true)
+            SlashCommandArgument.fromProps({
+                description: 'device name',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true
+            })
         ]
     }));
+    console.log('[SillyTPLink] Registered /tplink-on');
 
     // Command: /tplink-off <device-name>
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'tplink-off',
-        callback: async (args) => {
+        callback: async (args, value) => {
+            console.log('[SillyTPLink] /tplink-off called with:', { args, value });
             try {
-                const deviceName = args.toString().trim();
+                const deviceName = (value || args.toString()).trim();
 
                 if (!deviceName) {
                     return 'Error: Please specify a device name. Usage: /tplink-off <device-name>';
@@ -142,16 +157,22 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
         },
         helpString: 'Turn off a TP-Link device. Usage: /tplink-off <device-name>',
         unnamedArgumentList: [
-            SlashCommand.argument('device name', [SlashCommand.ARGUMENT_TYPE.STRING], true)
+            SlashCommandArgument.fromProps({
+                description: 'device name',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true
+            })
         ]
     }));
+    console.log('[SillyTPLink] Registered /tplink-off');
 
     // Command: /tplink-toggle <device-name>
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'tplink-toggle',
-        callback: async (args) => {
+        callback: async (args, value) => {
+            console.log('[SillyTPLink] /tplink-toggle called with:', { args, value });
             try {
-                const deviceName = args.toString().trim();
+                const deviceName = (value || args.toString()).trim();
 
                 if (!deviceName) {
                     return 'Error: Please specify a device name. Usage: /tplink-toggle <device-name>';
@@ -182,16 +203,23 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
         },
         helpString: 'Toggle a TP-Link device on/off. Usage: /tplink-toggle <device-name>',
         unnamedArgumentList: [
-            SlashCommand.argument('device name', [SlashCommand.ARGUMENT_TYPE.STRING], true)
+            SlashCommandArgument.fromProps({
+                description: 'device name',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true
+            })
         ]
     }));
+    console.log('[SillyTPLink] Registered /tplink-toggle');
 
     // Command: /tplink-status
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'tplink-status',
-        callback: async () => {
+        callback: async (args) => {
+            console.log('[SillyTPLink] /tplink-status called');
             try {
                 const devices = getDevices();
+                console.log('[SillyTPLink] Got devices:', devices);
 
                 if (!devices || devices.length === 0) {
                     return 'No TP-Link devices configured.';
@@ -212,6 +240,11 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
         helpString: 'List all TP-Link devices and their current states',
         unnamedArgumentList: []
     }));
+    console.log('[SillyTPLink] Registered /tplink-status');
 
-    console.log('[SillyTPLink] Slash commands registered successfully');
+    console.log('[SillyTPLink] All slash commands registered successfully');
+    } catch (error) {
+        console.error('[SillyTPLink] Error registering slash commands:', error);
+        console.error('[SillyTPLink] Stack trace:', error.stack);
+    }
 }
