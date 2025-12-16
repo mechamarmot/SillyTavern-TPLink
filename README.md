@@ -7,8 +7,8 @@ Control your TP-Link Kasa smart home devices directly from SillyTavern using the
 ## Requirements
 
 - **SillyTavern**
-- **[SillyTavern-PyRunner](https://github.com/SillyTavern/Extension-PyRunner)** - Extension (required)
-- **[SillyTavern-PyRunner-Plugin](https://github.com/SillyTavern/SillyTavern-PyRunner-Plugin)** - Server plugin (required)
+- **[SillyTavern-PyRunner](https://github.com/mechamarmot/SillyTavern-PyRunner)** - Extension (required)
+- **[SillyTavern-PyRunner-Plugin](https://github.com/mechamarmot/SillyTavern-PyRunner-Plugin)** - Server plugin (required)
 - **Python 3.7+**
 - **TP-Link Kasa Devices** (see compatible devices at bottom)
 
