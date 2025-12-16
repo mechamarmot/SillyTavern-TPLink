@@ -341,66 +341,6 @@ function App() {
         setIsDiscovering(false);
     };
 
-    const testDiscovery = async () => {
-        if (!pyRunnerAvailable) {
-            setError('PyRunner is not available');
-            return;
-        }
-
-        setError(null);
-
-        try {
-            console.log('[SillyTPLink] Running test discovery...');
-            const result = await PyRunnerService.testDiscovery();
-
-            console.log('[SillyTPLink] Test discovery result:', result);
-
-            if (result.error) {
-                setError(`Test failed: ${result.error}`);
-            } else {
-                const msg = `Test complete! Found ${result.devices?.length || 0} devices. Check browser console for detailed logs.`;
-                setError(msg);
-                alert(msg + '\n\nCheck the browser console (F12) for detailed output.');
-            }
-        } catch (err) {
-            console.error('[SillyTPLink] Test discovery error:', err);
-            setError(`Test error: ${err.message}`);
-        }
-    };
-
-    const testConnection = async (ip) => {
-        if (!pyRunnerAvailable) {
-            setError('PyRunner is not available');
-            return;
-        }
-
-        setError(null);
-
-        try {
-            console.log('[SillyTPLink] Testing direct connection to:', ip);
-            const result = await PyRunnerService.testConnection(ip);
-
-            console.log('[SillyTPLink] Connection test result:', result);
-
-            if (result.error) {
-                setError(`Connection test failed: ${result.error}`);
-                alert(`Failed to connect to ${ip}\n\nError: ${result.error}\n\nCheck console for details.`);
-            } else if (result.success) {
-                const deviceInfo = result.response?.system?.get_sysinfo;
-                const deviceName = deviceInfo?.alias || deviceInfo?.dev_name || 'Unknown';
-                const model = deviceInfo?.model || 'Unknown';
-                const msg = `SUCCESS! Connected to ${deviceName} (${model}) at ${ip}`;
-                setError(msg);
-                alert(`${msg}\n\nThe device is responding correctly! You can now add it.`);
-            } else {
-                setError('Connection test returned unexpected result');
-            }
-        } catch (err) {
-            console.error('[SillyTPLink] Connection test error:', err);
-            setError(`Test error: ${err.message}`);
-        }
-    };
-
     const scanNetwork = async () => {
         if (!pyRunnerAvailable) {
             setError('PyRunner is not available');
@@ -690,8 +630,6 @@ function App() {
             <AddDevice
                 onAddDevice={addDevice}
                 onDiscover={discoverDevices}
-                onTestDiscover={testDiscovery}
-                onTestConnection={testConnection}
                 onScanNetwork={scanNetwork}
                 isDiscovering={isDiscovering}
                 disabled={!pyRunnerAvailable}

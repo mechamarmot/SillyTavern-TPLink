@@ -254,23 +254,6 @@ with open('python/${script}', 'r') as f:
     }
 
     /**
-     * Test discovery with detailed logging
-     * @returns {Promise<Object>} - Test results with debug output
-     */
-    static async testDiscovery() {
-        return await this.executePython('test_discovery.py', []);
-    }
-
-    /**
-     * Test direct TCP connection to a device
-     * @param {string} ip - Device IP address
-     * @returns {Promise<Object>} - Test results
-     */
-    static async testConnection(ip) {
-        return await this.executePython('test_connection.py', [ip]);
-    }
-
-    /**
      * Scan network for Kasa devices with port 9999 open
      * @returns {Promise<Object>} - Scan results
      */

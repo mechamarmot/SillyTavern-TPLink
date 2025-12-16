@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 
-function AddDevice({ onAddDevice, onDiscover, onTestDiscover, onTestConnection, onScanNetwork, isDiscovering, disabled }) {
+function AddDevice({ onAddDevice, onDiscover, onScanNetwork, isDiscovering, disabled }) {
     const [ip, setIp] = useState('');
     const [name, setName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
-    const [isTesting, setIsTesting] = useState(false);
-    const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -24,22 +22,6 @@ function AddDevice({ onAddDevice, onDiscover, onTestDiscover, onTestConnection, 
         }
 
         setIsAdding(false);
-    };
-
-    const handleTestDiscover = async () => {
-        setIsTesting(true);
-        await onTestDiscover();
-        setIsTesting(false);
-    };
-
-    const handleTestConnection = async () => {
-        if (!ip.trim()) {
-            alert('Please enter an IP address first');
-            return;
-        }
-        setIsTestingConnection(true);
-        await onTestConnection(ip.trim());
-        setIsTestingConnection(false);
     };
 
     const handleScanNetwork = async () => {
@@ -83,29 +65,11 @@ function AddDevice({ onAddDevice, onDiscover, onTestDiscover, onTestConnection, 
 
                     <button
                         type="button"
-                        onClick={handleTestConnection}
-                        disabled={disabled || isTestingConnection || !ip.trim()}
-                        className="btn-test-connection"
-                    >
-                        {isTestingConnection ? 'Testing...' : 'Test IP Connection'}
-                    </button>
-
-                    <button
-                        type="button"
                         onClick={onDiscover}
-                        disabled={disabled || isDiscovering || isTesting}
+                        disabled={disabled || isDiscovering}
                         className="btn-discover"
                     >
                         {isDiscovering ? 'Discovering...' : 'Auto-Discover'}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={handleTestDiscover}
-                        disabled={disabled || isDiscovering || isTesting}
-                        className="btn-test"
-                    >
-                        {isTesting ? 'Testing...' : 'Test Discovery (Debug)'}
                     </button>
 
                     <button
@@ -114,7 +78,7 @@ function AddDevice({ onAddDevice, onDiscover, onTestDiscover, onTestConnection, 
                         disabled={disabled || isScanning}
                         className="btn-scan"
                     >
-                        {isScanning ? 'Scanning...' : 'Scan Network (Port 9999)'}
+                        {isScanning ? 'Scanning...' : 'Network Scan'}
                     </button>
                 </div>
             </form>
