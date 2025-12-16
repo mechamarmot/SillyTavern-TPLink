@@ -43,7 +43,7 @@ The `/tplink-cycle` command turns a device on for a specified number of seconds,
 
 **Available Macros:**
 - `{{tplink-on:DeviceName}}` - Turn device on
-- `{{tplink-off:DeviceName}}` - Turn device off  
+- `{{tplink-off:DeviceName}}` - Turn device off
 - `{{tplink-cycle:DeviceName:seconds}}` - Turn on, wait, then turn off
 
 **How it works:**
@@ -60,17 +60,17 @@ The `/tplink-cycle` command turns a device on for a specified number of seconds,
 
 Embed control in messages:
 ```
-Turn on the lights {{tplink-on:Living Room Light}} please!
+Turn on the lights {{tplink-on:Living_Room_Light}} please!
 ```
 
 Result:
 ```
-Turn on the lights [Living Room Lamp ON] please!
+Turn on the lights [Living Room Light ON] please!
 ```
 
 **Cycle macro** - Turn on for a duration, then automatically turn off:
 ```
-Activating the lamp {{tplink-cycle:Desk Lamp:5}} for 5 seconds
+Activating the lamp {{tplink-cycle:Desk_Lamp:5}} for 5 seconds
 ```
 
 Result:
@@ -92,7 +92,7 @@ The lamp will flash {{tplink-cycle:Lamp:3}} as a notification
 
 **Scene control:**
 ```
-/tplink-on Living Room Light | /tplink-on Table Lamp | /echo Scene activated
+/tplink-on Living_Room_Light | /tplink-on Table_Lamp | /echo Scene activated
 ```
 
 ## Device Management
