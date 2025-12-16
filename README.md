@@ -161,16 +161,16 @@ Use slash commands in the chat input or in STScript:
 Turn on a device, wait 10 seconds, then turn it off:
 
 ```
-/tplink-on Lamp | /setvar key=timer_done false | /pyrun import time; time.sleep(10) | /setvar key=timer_done true | /tplink-off Lamp
+/tplink-on Lamp | /pyrun import time; time.sleep(10) | /tplink-off Lamp
 ```
 
-Or chain commands sequentially:
+Turn on a device, wait 10 minutes, then turn it off:
 
 ```
-/tplink-on Coffee Maker
-/pyrun import time; time.sleep(600)  # Wait 10 minutes
-/tplink-off Coffee Maker
+/tplink-on Coffee Maker | /pyrun import time; time.sleep(600) | /tplink-off Coffee Maker
 ```
+
+**Note**: Commands must be chained with `|` (pipe) for sequential execution. Commands on separate lines will run simultaneously, not sequentially.
 
 **Use with Quick Replies:**
 
