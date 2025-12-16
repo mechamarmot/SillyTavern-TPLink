@@ -16,9 +16,9 @@ Control your TP-Link Kasa smart home devices directly from SillyTavern using the
 **Recommended: Use SillyTavern's Built-in Extension Manager**
 
 1. Open SillyTavern's Extension Manager (puzzle piece icon)
-2. Search for "SillyTPLink" in the available extensions
+2. Paste this URL: `https://github.com/mechamarmot/SillyTavern-TPLink`
 3. Click "Install"
-4. Install PyRunner extension the same way (server plugin installs automatically)
+4. Install PyRunner the same way using: `https://github.com/mechamarmot/SillyTavern-PyRunner`
 5. Enable both extensions in the extensions panel
 6. Restart SillyTavern
 
