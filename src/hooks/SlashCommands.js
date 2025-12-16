@@ -9,7 +9,7 @@
  */
 
 /**
- * Wait for SillyTavern context to be available
+ * Wait for SillyTavern slash command system to be available
  * @returns {Promise<object|null>}
  */
 async function waitForSillyTavern() {
@@ -20,10 +20,11 @@ async function waitForSillyTavern() {
         const checkInterval = setInterval(() => {
             attempts++;
 
+            // Check for slash command system on SillyTavern context
             if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
                 const context = SillyTavern.getContext();
                 if (context && context.SlashCommand && context.SlashCommandParser) {
-                    console.log(`[SillyTPLink] SillyTavern context found after ${attempts} attempts`);
+                    console.log(`[SillyTPLink] Slash command system found after ${attempts} attempts`);
                     clearInterval(checkInterval);
                     resolve(context);
                     return;
@@ -32,7 +33,7 @@ async function waitForSillyTavern() {
 
             if (attempts >= maxAttempts) {
                 clearInterval(checkInterval);
-                console.error('[SillyTPLink] Timeout waiting for SillyTavern context after 30 seconds');
+                console.error('[SillyTPLink] Timeout waiting for slash command system after 30 seconds');
                 resolve(null);
             }
         }, 300);
@@ -58,14 +59,15 @@ function findDevice(devices, name) {
 export async function registerTPLinkCommands(getDevices, controlDevice) {
     console.log('[SillyTPLink] Registering slash commands...');
 
-    // Wait for SillyTavern to be available
+    // Wait for SillyTavern slash command system to be available
     const context = await waitForSillyTavern();
 
     if (!context) {
-        console.error('[SillyTPLink] SillyTavern context not available, cannot register commands');
+        console.error('[SillyTPLink] Slash command system not available, cannot register commands');
         return;
     }
 
+    // Access slash command system from context
     const { SlashCommand, SlashCommandParser } = context;
 
     // Command: /tplink-on <device-name>

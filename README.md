@@ -6,7 +6,7 @@ This extension jailbreaks TP-Link Kasa devices using the reverse-engineered loca
 
 **⚠️ Compatibility Note**: This extension is designed specifically for **TP-Link Kasa** devices and has been tested extensively with the Kasa product line. Other TP-Link smart home brands (Tapo, etc.) use different protocols and are not supported.
 
-![SillyTPLink Interface](https://github.com/user-attachments/assets/e58e2dd7-8f9e-4ca1-bd17-cd37bbbdb0fd)
+![SillyTPLink Interface](images/screenshot.png)
 
 ## Requirements
 
@@ -15,31 +15,7 @@ This extension jailbreaks TP-Link Kasa devices using the reverse-engineered loca
 - **SillyTavern** - The host application
 - **[SillyTavern-PyRunner](https://github.com/SillyTavern/Extension-PyRunner)** ⚠️ **REQUIRED** - This extension depends on PyRunner for Python script execution
 - **Python 3.7+** - Required for device communication protocol
-
-### Compatible Devices
-
-This extension supports TP-Link **Kasa** devices using the local control protocol. Based on the [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) library, compatible devices include:
-
-**Smart Plugs**:
-- HS100, HS103, HS105, HS107, HS110
-- KP100, KP115, KP125, KP401
-- EP10, EP25
-
-**Smart Switches**:
-- HS200, HS210, HS220
-- KS200, KS220, KS230
-
-**Smart Bulbs**:
-- LB100, LB110, LB120, LB130, LB200, LB230
-- KL50, KL60, KL110, KL120, KL125, KL130, KL135
-
-**Smart Light Strips**:
-- KL400, KL420, KL430
-
-**Power Strips**:
-- HS300, KP200, KP303, KP400
-
-**Note**: Devices with energy monitoring (HS110, KP115, KP125) provide additional power consumption data.
+- **TP-Link Kasa Devices** - See compatible devices list at bottom of this document
 
 ## Features
 
@@ -57,7 +33,6 @@ This extension supports TP-Link **Kasa** devices using the local control protoco
 - **Device Organization**: Manage multiple devices with custom descriptions
 
 ### Advanced Features
-- **Energy Monitoring**: View power consumption for compatible devices (HS110, KP115, KP125)
 - **Local Network Control**: Direct communication with devices (no cloud required)
 - **Scriptable Automation**: Chain commands together with PyRunner for complex automations
 
@@ -293,7 +268,6 @@ The Python backend (`kasa_api.py`) supports these commands:
 - `on <ip>` - Turn device on
 - `off <ip>` - Turn device off
 - `toggle <ip>` - Toggle device state
-- `emeter <ip>` - Get energy meter data (HS110/KP115/KP125)
 - `led <ip> <on|off>` - Control LED indicator
 - `reboot <ip>` - Reboot device
 
@@ -435,6 +409,29 @@ Apache 2.0 License - Consistent with tplink-smartplug upstream project
 
 See LICENSE file for full license text.
 
+## Compatible Devices
+
+This extension supports TP-Link **Kasa** devices using the local control protocol. Based on the [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) library, compatible devices include:
+
+**Smart Plugs**:
+- HS100, HS103, HS105, HS107, HS110
+- KP100, KP115, KP125, KP401
+- EP10, EP25
+
+**Smart Switches**:
+- HS200, HS210, HS220
+- KS200, KS220, KS230
+
+**Smart Bulbs**:
+- LB100, LB110, LB120, LB130, LB200, LB230
+- KL50, KL60, KL110, KL120, KL125, KL130, KL135
+
+**Smart Light Strips**:
+- KL400, KL420, KL430
+
+**Power Strips**:
+- HS300, KP200, KP303, KP400
+
 ## Support
 
 For issues, questions, or feature requests:
@@ -451,7 +448,6 @@ For issues, questions, or feature requests:
 - Slash commands (`/tplink-on`, `/tplink-off`, `/tplink-toggle`, `/tplink-status`)
 - Message macros (`{{tplink-on:Device}}`, `{{tplink-off:Device}}`)
 - Custom device descriptions
-- Energy monitoring for compatible devices
 - Network scanning capabilities
 - Context menu for device management
 
