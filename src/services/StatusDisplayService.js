@@ -10,6 +10,7 @@ class StatusDisplayService {
         this.deviceMap = new Map(); // Key: IP address, Value: device state object
         this.eventHandlers = {};
         this.enabled = true; // Enabled by default
+        this.queueCounts = new Map(); // Key: IP address, Value: queue length
     }
 
     /**
@@ -59,16 +60,39 @@ class StatusDisplayService {
         };
 
         this.eventHandlers.cycle = (e) => {
-            const { ip, deviceDescription, deviceName, duration } = e.detail;
+            const { ip, deviceDescription, deviceName, duration, queueLength } = e.detail;
             console.log(`[SillyTPLink StatusDisplay] 🔄 Received CYCLE event:`, {
                 ip,
                 deviceName,
                 deviceDescription,
                 duration,
+                queueLength,
                 currentDevicesInMap: Array.from(this.deviceMap.keys())
             });
+            // Update queue count
+            this.queueCounts.set(ip, queueLength || 0);
             this.addOrUpdateDevice(ip, deviceDescription, 'cycle', duration);
             this.startDeviceCountdown(ip, duration);
+        };
+
+        this.eventHandlers.queueUpdate = (e) => {
+            const { ip, queueLength } = e.detail;
+            console.log(`[SillyTPLink StatusDisplay] 📋 Received QUEUE UPDATE event:`, { ip, queueLength });
+            this.queueCounts.set(ip, queueLength);
+            this.updateDeviceDisplay(ip);
+        };
+
+        this.eventHandlers.cycleStopped = (e) => {
+            const { ip } = e.detail;
+            console.log(`[SillyTPLink StatusDisplay] ⏹️ Received CYCLE STOPPED event:`, { ip });
+            this.queueCounts.set(ip, 0);
+            const device = this.deviceMap.get(ip);
+            if (device) {
+                this.clearDeviceTimer(ip);
+                device.status = 'off';
+                device.countdown = null;
+                this.updateDeviceDisplay(ip);
+            }
         };
 
         this.eventHandlers.toggle = (e) => {
@@ -80,9 +104,11 @@ class StatusDisplayService {
         window.addEventListener('tplink:device:on', this.eventHandlers.on);
         window.addEventListener('tplink:device:off', this.eventHandlers.off);
         window.addEventListener('tplink:device:cycle', this.eventHandlers.cycle);
+        window.addEventListener('tplink:device:queueUpdate', this.eventHandlers.queueUpdate);
+        window.addEventListener('tplink:device:cycleStopped', this.eventHandlers.cycleStopped);
         window.addEventListener('tplink:statusbox:toggle', this.eventHandlers.toggle);
 
-        console.log('[SillyTPLink StatusDisplay] Event listeners attached for: on, off, cycle, toggle');
+        console.log('[SillyTPLink StatusDisplay] Event listeners attached for: on, off, cycle, queueUpdate, cycleStopped, toggle');
     }
 
     /**
@@ -277,9 +303,13 @@ class StatusDisplayService {
         dot.className = 'tplink-status-dot';
         dot.classList.add(`status-${device.status}`);
 
+        // Get queue count for this device
+        const queueLength = this.queueCounts.get(ip) || 0;
+        const queueText = queueLength > 0 ? ` (${queueLength} queued)` : '';
+
         // Update text
         if (device.status === 'cycle' && device.countdown !== null) {
-            text.textContent = `${device.description} ${device.countdown}s`;
+            text.textContent = `${device.description} ${device.countdown}s${queueText}`;
         } else {
             text.textContent = `${device.description} ${device.status.toUpperCase()}`;
         }
@@ -336,8 +366,9 @@ class StatusDisplayService {
             }
         }
 
-        // Clear device map
+        // Clear device map and queue counts
         this.deviceMap.clear();
+        this.queueCounts.clear();
 
         // Remove event listeners
         if (this.eventHandlers.on) {
@@ -348,6 +379,12 @@ class StatusDisplayService {
         }
         if (this.eventHandlers.cycle) {
             window.removeEventListener('tplink:device:cycle', this.eventHandlers.cycle);
+        }
+        if (this.eventHandlers.queueUpdate) {
+            window.removeEventListener('tplink:device:queueUpdate', this.eventHandlers.queueUpdate);
+        }
+        if (this.eventHandlers.cycleStopped) {
+            window.removeEventListener('tplink:device:cycleStopped', this.eventHandlers.cycleStopped);
         }
         if (this.eventHandlers.toggle) {
             window.removeEventListener('tplink:statusbox:toggle', this.eventHandlers.toggle);

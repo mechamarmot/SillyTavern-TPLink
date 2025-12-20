@@ -5,8 +5,13 @@
  * - /tplink-on <device-name> - Turn device on
  * - /tplink-off <device-name> - Turn device off
  * - /tplink-toggle <device-name> - Toggle device state
+ * - /tplink-cycle <device-name> <seconds> - Cycle device on for duration
+ * - /tplink-stop <device-name> - Stop current cycle and clear queue
  * - /tplink-status - List all devices and their states
  */
+
+// Cycle queue management - keyed by device IP
+const cycleQueues = new Map(); // IP -> { running: boolean, queue: [], currentTimeout: null, controlDevice: null }
 
 /**
  * Wait for SillyTavern slash command system to be available
@@ -49,6 +54,103 @@ async function waitForSillyTavern() {
 function findDevice(devices, name) {
     const nameLower = name.toLowerCase().trim();
     return devices.find(d => d.name.toLowerCase() === nameLower) || null;
+}
+
+/**
+ * Get or create a cycle queue for a device
+ * @param {string} ip - Device IP address
+ * @returns {object} Queue state object
+ */
+function getCycleQueue(ip) {
+    if (!cycleQueues.has(ip)) {
+        cycleQueues.set(ip, {
+            running: false,
+            queue: [],
+            currentTimeout: null,
+            controlDevice: null
+        });
+    }
+    return cycleQueues.get(ip);
+}
+
+/**
+ * Emit queue update event for status display
+ * @param {string} ip - Device IP address
+ * @param {number} queueLength - Number of items in queue
+ */
+function emitQueueUpdate(ip, queueLength) {
+    window.dispatchEvent(new CustomEvent('tplink:device:queueUpdate', {
+        detail: { ip, queueLength }
+    }));
+}
+
+/**
+ * Process the next cycle in the queue
+ * @param {string} ip - Device IP address
+ * @param {object} device - Device object
+ */
+async function processNextCycle(ip, device) {
+    const queueState = getCycleQueue(ip);
+
+    if (queueState.queue.length === 0) {
+        // No more cycles - turn off and mark as not running
+        queueState.running = false;
+        await queueState.controlDevice(ip, 'off');
+        emitQueueUpdate(ip, 0);
+        return;
+    }
+
+    // Get next cycle duration
+    const duration = queueState.queue.shift();
+    queueState.running = true;
+
+    console.log(`[SillyTPLink] Processing cycle for "${device.name}": ${duration}s (${queueState.queue.length} remaining in queue)`);
+
+    // Emit cycle event for status display
+    window.dispatchEvent(new CustomEvent('tplink:device:cycle', {
+        detail: {
+            deviceName: device.name,
+            deviceDescription: device.description,
+            ip: ip,
+            duration: duration,
+            queueLength: queueState.queue.length
+        }
+    }));
+
+    // Schedule next cycle or turn off
+    queueState.currentTimeout = setTimeout(async () => {
+        queueState.currentTimeout = null;
+        await processNextCycle(ip, device);
+    }, duration * 1000);
+}
+
+/**
+ * Stop all cycles for a device and clear the queue
+ * @param {string} ip - Device IP address
+ * @param {Function} controlDevice - Device control function
+ */
+async function stopCycleQueue(ip, controlDevice) {
+    const queueState = getCycleQueue(ip);
+
+    // Clear the timeout
+    if (queueState.currentTimeout) {
+        clearTimeout(queueState.currentTimeout);
+        queueState.currentTimeout = null;
+    }
+
+    // Clear the queue
+    queueState.queue = [];
+    queueState.running = false;
+
+    // Turn off the device
+    await controlDevice(ip, 'off');
+
+    // Emit stop event for status display
+    window.dispatchEvent(new CustomEvent('tplink:device:cycleStopped', {
+        detail: { ip }
+    }));
+
+    emitQueueUpdate(ip, 0);
 }
 
 /**
@@ -246,9 +348,31 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
                     return `Error: Device "${deviceName}" not found. Use /tplink-status to list devices.`;
                 }
 
+                // Get the queue state for this device
+                const queueState = getCycleQueue(device.ip);
+                queueState.controlDevice = controlDevice;
+
+                // Check if a cycle is already running
+                if (queueState.running) {
+                    // Add to queue
+                    queueState.queue.push(duration);
+                    const queueLength = queueState.queue.length;
+
+                    console.log(`[SillyTPLink] Queued cycle for "${device.name}": ${duration}s (${queueLength} in queue)`);
+
+                    // Emit queue update event
+                    emitQueueUpdate(device.ip, queueLength);
+
+                    return `✓ Queued cycle for "${device.name}" (${duration}s) - ${queueLength} in queue`;
+                }
+
+                // No cycle running - start immediately
+                queueState.running = true;
+
                 // Turn on the device
                 const onSuccess = await controlDevice(device.ip, 'on');
                 if (!onSuccess) {
+                    queueState.running = false;
                     return `Error: Failed to turn on "${device.name}"`;
                 }
 
@@ -258,14 +382,15 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
                         deviceName: device.name,
                         deviceDescription: device.description,
                         ip: device.ip,
-                        duration: duration
+                        duration: duration,
+                        queueLength: 0
                     }
                 }));
 
-                // Schedule turn off
-                setTimeout(async () => {
-                    console.log(`[SillyTPLink] /tplink-cycle: Turning off device "${device.name}" after ${duration} seconds`);
-                    await controlDevice(device.ip, 'off');
+                // Schedule next cycle or turn off
+                queueState.currentTimeout = setTimeout(async () => {
+                    queueState.currentTimeout = null;
+                    await processNextCycle(device.ip, device);
                 }, duration * 1000);
 
                 return `✓ Cycling "${device.name}" for ${duration} seconds`;
@@ -274,7 +399,7 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
                 return `Error: ${error.message}`;
             }
         },
-        helpString: 'Cycle a TP-Link device (turn on, wait, turn off). Usage: /tplink-cycle <device-name> <seconds>',
+        helpString: 'Cycle a TP-Link device (turn on, wait, turn off). Queues additional cycles if one is running. Usage: /tplink-cycle <device-name> <seconds>',
         unnamedArgumentList: [
             SlashCommandArgument.fromProps({
                 description: 'device name and duration',
@@ -284,6 +409,57 @@ export async function registerTPLinkCommands(getDevices, controlDevice) {
         ]
     }));
     console.log('[SillyTPLink] Registered /tplink-cycle');
+
+    // Command: /tplink-stop <device-name>
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'tplink-stop',
+        callback: async (args, value) => {
+            console.log('[SillyTPLink] /tplink-stop called with:', { args, value });
+            try {
+                const deviceName = (value || args.toString()).trim();
+
+                if (!deviceName) {
+                    return 'Error: Please specify a device name. Usage: /tplink-stop <device-name>';
+                }
+
+                const devices = getDevices();
+                if (!devices || devices.length === 0) {
+                    return 'Error: No devices configured';
+                }
+
+                const device = findDevice(devices, deviceName);
+                if (!device) {
+                    return `Error: Device "${deviceName}" not found. Use /tplink-status to list devices.`;
+                }
+
+                const queueState = getCycleQueue(device.ip);
+                const wasRunning = queueState.running;
+                const queuedCount = queueState.queue.length;
+
+                // Stop the cycle and clear queue
+                await stopCycleQueue(device.ip, controlDevice);
+
+                if (!wasRunning && queuedCount === 0) {
+                    return `No active cycle for "${device.name}"`;
+                }
+
+                const clearedMsg = queuedCount > 0 ? ` (cleared ${queuedCount} queued)` : '';
+                return `✓ Stopped cycle for "${device.name}"${clearedMsg}`;
+            } catch (error) {
+                console.error('[SillyTPLink] /tplink-stop error:', error);
+                return `Error: ${error.message}`;
+            }
+        },
+        helpString: 'Stop the current cycle and clear the queue for a TP-Link device. Usage: /tplink-stop <device-name>',
+        unnamedArgumentList: [
+            SlashCommandArgument.fromProps({
+                description: 'device name',
+                typeList: [ARGUMENT_TYPE.STRING],
+                isRequired: true
+            })
+        ]
+    }));
+    console.log('[SillyTPLink] Registered /tplink-stop');
 
     // Command: /tplink-status
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
